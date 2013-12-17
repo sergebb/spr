@@ -27,6 +27,15 @@ def smoothListGaussian(list,strippedXs=False,degree=5):
          smoothed[i]=sum(np.array(list[i:i+window])*weight)/sum(weight)  
      return smoothed  
 
+def fft_smooth(data, degree=10):
+    fft_data = np.fft.fft(data)
+    l = len(data)/2
+    deg = len(data)*degree/100
+    for i in range(deg):
+        fft_data[l-i]=fft_data[l+i]=0
+
+    return np.fft.ifft(fft_data)
+
 def Extremes(data,diff):
         minpoints = []
         maxpoints = []
@@ -67,9 +76,10 @@ def Formants(data):
     limits=[]
     formants=[]
     limits.append(0)
-    maxp,minp = Extremes(data,50)
+    maxp,minp = Extremes(data,100)
+    print minp
     for i in minp:
-        if data[i]<10 and i-limits[-1]>10:
+        if data[i]<50: #and i-limits[-1]>50:
             limits.append(i)
     if len(data)-limits[-1]>10:
         limits.append(len(data)-1)
@@ -80,6 +90,14 @@ def Formants(data):
         formants.append( p+np.argmax(data[p:q]) )
 
     return formants
+
+def Normalize(data):
+    num = data.shape[0]
+    norm = np.amax(data)/100.0
+
+    for i in range(num):
+        data[i]/=norm
+    return data
 
 
 def main():
@@ -112,13 +130,21 @@ def main():
 
         Pxx, freqs, bins, im=pylab.specgram(signal, Fs=frame_rate)
 
-        combined_amp = np.amax(Pxx,axis=1)
-        deg = 3
-        sm_amp = smoothListGaussian(combined_amp,degree=deg)
+        combined_max_amp = np.amax(Pxx,axis=1)
+        combined_min_amp = np.amin(Pxx,axis=1)
 
-        print freqs[Formants(combined_amp)]
-        plt.plot(freqs,combined_amp)
-        # # plt.plot(freqs,Pxx)
+        combined_diff_amp = [(p-q) for (p,q) in izip(combined_max_amp,combined_min_amp)]
+
+        deg = 3
+        sm_amp = smoothListGaussian(combined_max_amp,degree=deg)
+
+        # fft_amp = fft_smooth(combined_diff_amp,40)
+
+        # print freqs[Formants(combined_max_amp)]
+        # plt.plot(freqs[:1-2*deg],sm_amp)
+        # plt.plot(freqs,combined_max_amp-combined_diff_amp)
+        # plt.plot(freqs,combined_min_amp)
+        plt.plot(freqs,Pxx)
         # for i in range(len(combined_amp)):
         #     print "%04d\t%04d" % (i,combined_amp[i])
 
@@ -133,9 +159,9 @@ def main():
 
         # print freqs[np.argmax(combined_amp)]
 
-        plt.show()
-        # plt.savefig(img_name)
-        # plt.clf()
+        # plt.show()
+        plt.savefig(img_name)
+        plt.clf()
         audio.close()
     
     pass

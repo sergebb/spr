@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# coding=UTF-8
 
 import sys
 import numpy as np
@@ -12,15 +13,29 @@ def pca(input):
     (u,s,v) = np.linalg.svd(input, full_matrices=False)
     return np.dot(input, v.T)
 
+def Normalize(data):
+    num = data.shape[0]
+    norm = np.amax(data)/100.0
+
+    for i in range(num):
+        data[i]/=norm
+    return data
+
+def file_type(line):
+    t = unicode(line)[0]
+    # print 't=%s'%t
+    return {u'a':1,u'и':2,u'о':3,u'у':4,u'ы':5,u'э':6}[t]
+
 def main():
     input = None
     types = list()
     FILES = 'files.dat'
 
-    file_list = open(FILES,'r')
+    # file_list = open(FILES,'r')
+    file_list = sys.argv[1:]
     for line in file_list:
-        f_name = line.split(' ')[0]
-        f_type = int(line.split(' ')[1])
+        f_name = line
+        f_type = file_type(line)
 
         types.append(f_type)
 
@@ -33,10 +48,12 @@ def main():
         Pxx, freqs, bins, im=pylab.specgram(signal, Fs=frame_rate)
         combined_amp = np.amax(Pxx,axis=1)
 
+        pca_data = Normalize(combined_amp)
+
         if input == None:
-            input = combined_amp
+            input = pca_data
         else:
-            input = np.vstack([input, combined_amp])
+            input = np.vstack([input, pca_data])
 
         data_file.close()
 
@@ -44,9 +61,9 @@ def main():
 
     for r in A:
         t = types.pop(0)
-        print "%.04f\t%.04f\t%d" % (r[0], r[1], t)
+        print "%.06f\t%.06f\t%d" % (r[0], r[1], t)
 
-    file_list.close()
+    # file_list.close()
 
     # try:
     #     data_file = sys.argv[1]
