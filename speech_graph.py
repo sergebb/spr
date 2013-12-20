@@ -135,7 +135,7 @@ def main():
 
         combined_diff_amp = [(p-q) for (p,q) in izip(combined_max_amp,combined_min_amp)]
 
-        deg = 3
+        deg = 10
         sm_amp = smoothListGaussian(combined_max_amp,degree=deg)
 
         # fft_amp = fft_smooth(combined_diff_amp,40)
@@ -144,7 +144,7 @@ def main():
         # plt.plot(freqs[:1-2*deg],sm_amp)
         # plt.plot(freqs,combined_max_amp-combined_diff_amp)
         # plt.plot(freqs,combined_min_amp)
-        plt.plot(freqs,Pxx)
+        plt.plot(freqs[:1-2*deg],sm_amp)
         # for i in range(len(combined_amp)):
         #     print "%04d\t%04d" % (i,combined_amp[i])
 

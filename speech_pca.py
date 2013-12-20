@@ -22,9 +22,24 @@ def Normalize(data):
     return data
 
 def file_type(line):
-    t = unicode(line)[0]
+    t = unicode(line.split('1')[0])
     # print 't=%s'%t
-    return {u'a':1,u'и':2,u'о':3,u'у':4,u'ы':5,u'э':6}[t]
+    return {u'a':1,u'i':2,u'o':3,u'u':4,u'ih':5,u'eh':6}[t]
+
+def smoothListGaussian(list,strippedXs=False,degree=5):  
+     window=degree*2-1  
+     weight=np.array([1.0]*window)  
+     weightGauss=[]  
+     for i in range(window):
+         i=i-degree+1  
+         frac=i/float(window)  
+         gauss=1/(np.exp((4*(frac))**2))  
+         weightGauss.append(gauss)  
+     weight=np.array(weightGauss)*weight  
+     smoothed=[0.0]*(len(list)-window)  
+     for i in range(len(smoothed)):  
+         smoothed[i]=sum(np.array(list[i:i+window])*weight)/sum(weight)  
+     return smoothed
 
 def main():
     input = None
@@ -36,6 +51,7 @@ def main():
     for line in file_list:
         f_name = line
         f_type = file_type(line)
+        sys.stderr.write("%s %d\n"%(f_name,f_type))
 
         types.append(f_type)
 
@@ -46,9 +62,13 @@ def main():
         signal = np.fromstring(frames, 'Int16')
 
         Pxx, freqs, bins, im=pylab.specgram(signal, Fs=frame_rate)
-        combined_amp = np.amax(Pxx,axis=1)
+        combined_max_amp = np.amax(Pxx,axis=1)
 
-        pca_data = Normalize(combined_amp)
+        deg = 10
+        sm_amp = smoothListGaussian(combined_max_amp,degree=deg)
+
+        # pca_data = Normalize(sm_amp)
+        pca_data = Normalize( np.array(sm_amp))
 
         if input == None:
             input = pca_data
@@ -56,6 +76,10 @@ def main():
             input = np.vstack([input, pca_data])
 
         data_file.close()
+
+    if input == None:
+        sys.stderr.write("No input files\n")
+        exit(1)
 
     A = pca(input)
 
