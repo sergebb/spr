@@ -7,24 +7,14 @@ import scipy as sp
 import pylab
 from itertools import izip
 import wave
+from sklearn import svm
 
-def pca(input):
-    input = input - input.mean(axis=0)
-    (u,s,v) = np.linalg.svd(input, full_matrices=False)
-    return np.dot(input, v.T)
-
-def Normalize(data):
-    num = data.shape[0]
-    norm = np.amax(data)/100.0
-
-    for i in range(num):
-        data[i]/=norm
-    return data
+TYPES_NUM = 6
 
 def file_type(line):
     t = unicode(line.split('1')[0])
     # print 't=%s'%t
-    return {u'a':1,u'i':2,u'o':3,u'u':4,u'ih':5,u'eh':6}[t]
+    return {u'a':0,u'i':1,u'o':2,u'u':3,u'ih':4,u'eh':5}[t]
 
 def smoothListGaussian(list,strippedXs=False,degree=5):  
      window=degree*2-1  
@@ -42,8 +32,8 @@ def smoothListGaussian(list,strippedXs=False,degree=5):
      return smoothed
 
 def main():
-    input = None
-    types = list()
+    input = []
+    types = []
     FILES = 'files.dat'
 
     # file_list = open(FILES,'r')
@@ -52,8 +42,6 @@ def main():
         f_name = line
         f_type = file_type(line)
         sys.stderr.write("%s %d\n"%(f_name,f_type))
-
-        types.append(f_type)
 
         data_file = wave.open(f_name,'r')
 
@@ -69,24 +57,35 @@ def main():
         sm_amp = smoothListGaussian(combined_mean_amp,degree=deg)
 
         # pca_data = Normalize(sm_amp)
-        pca_data = Normalize( np.array(sm_amp))
+        svm_data = np.array(sm_amp)
 
-        if input == None:
-            input = pca_data
-        else:
-            input = np.vstack([input, pca_data])
+        input.append(svm_data)
+        types.append(f_type)
 
         data_file.close()
 
-    if input == None:
+    if len(input) == 0:
         sys.stderr.write("No input files\n")
         exit(1)
 
-    A = pca(input)
+    # svc = svm.SVC(kernel='linear')    # linear OR poly OR rbf
+    # svc = svm.SVC(kernel='poly',degree=2) 
+    svc = svm.SVC(kernel='rbf')
 
-    for r in A:
-        t = types.pop(0)
-        print "%.06f\t%.06f\t%d" % (r[0], r[1], t)
+    svc.fit(input, types)
+
+    new_types=svc.predict(input)
+
+    for i in range(TYPES_NUM):
+        print new_types[i*10:i*10+10]
+
+
+
+
+    
+    # for r in A:
+    #     t = types.pop(0)
+    #     print "%.06f\t%.06f\t%d" % (r[0], r[1], t)
 
     # file_list.close()
 
