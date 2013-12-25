@@ -8,6 +8,8 @@ import pylab
 from itertools import izip
 import wave
 from sklearn import svm
+import random
+import time
 
 TYPES_NUM = 6
 
@@ -31,17 +33,29 @@ def smoothListGaussian(list,strippedXs=False,degree=5):
          smoothed[i]=sum(np.array(list[i:i+window])*weight)/sum(weight)  
      return smoothed
 
+def predict_quality(data,test):
+    l = min(len(data),len(test))
+    correct = 0
+    for i in range(l):
+        if data[i] == test[i]: correct+=1
+    return 100*correct/float(l)
+
+
 def main():
     input = []
-    types = []
+    correct_types = []
+    strict_input = []
+    strict_types = []
     FILES = 'files.dat'
+
+    random.seed(time.time())
 
     # file_list = open(FILES,'r')
     file_list = sys.argv[1:]
     for line in file_list:
         f_name = line
         f_type = file_type(line)
-        sys.stderr.write("%s %d\n"%(f_name,f_type))
+        # sys.stderr.write("%s %d\n"%(f_name,f_type))
 
         data_file = wave.open(f_name,'r')
 
@@ -60,7 +74,10 @@ def main():
         svm_data = np.array(sm_amp)
 
         input.append(svm_data)
-        types.append(f_type)
+        correct_types.append(f_type)
+        if random.random() >= 0.5:
+            strict_input.append(svm_data)
+            strict_types.append(f_type)
 
         data_file.close()
 
@@ -68,16 +85,19 @@ def main():
         sys.stderr.write("No input files\n")
         exit(1)
 
-    # svc = svm.SVC(kernel='linear')    # linear OR poly OR rbf
+    svc = svm.SVC(kernel='linear')    # linear OR poly OR rbf
     # svc = svm.SVC(kernel='poly',degree=2) 
-    svc = svm.SVC(kernel='rbf')
+    # svc = svm.SVC(kernel='rbf')
 
-    svc.fit(input, types)
+    # svc.fit(input, types)
+    svc.fit(strict_input,strict_types)
 
     new_types=svc.predict(input)
 
     for i in range(TYPES_NUM):
         print new_types[i*10:i*10+10]
+
+    sys.stderr.write("%2.2f\n"%predict_quality(new_types,correct_types))
 
 
 
